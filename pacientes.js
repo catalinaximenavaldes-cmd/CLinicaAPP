@@ -258,7 +258,7 @@ async function verPaciente(nombre) {
       <div class="columna-botones no-print">
         <button class="btn-sesiones" onclick="toggleSesiones('${escapeHtml(nombre)}')">Ver Sesiones Realizadas</button>
         <button onclick="imprimirCarta('${escapeHtml(nombre)}')" style="background:#34495e; color:white;">Imprimir Ficha</button>
-        <button class="btn-guardar" onclick="window.location.href='evolucion.html'">Nueva Evolucion</button>
+        <button class="btn-guardar" onclick="window.location.href='evolución.html'">Nueva Evolucion</button>
         <button class="btn-documentos" onclick="window.location.href='documentos.html'">Recetas y Examenes</button>
         <button onclick="window.location.href='imagenes-paciente.html'" style="background:#8e44ad; color:white;">Imagenes</button>
         <button onclick="altaPaciente('${escapeHtml(nombre)}')" style="background:#e67e22; color:white;">Dar de Alta</button>
@@ -505,14 +505,17 @@ async function toggleSesiones(nombre) {
 
   try {
     if (!sesionesCache) {
-      const res = await fetch(URL + "?tabla=Sesiones");
+      const res = await fetch(URL + "?tabla=Agenda");
       const data = await res.json();
       sesionesCache = Array.isArray(data) ? data : [];
     }
 
     const sesiones = sesionesCache
       .slice(1)
-      .filter(fila => (fila[1] || "").toString().trim() === nombre)
+      .filter(fila =>
+        (fila[2] || "").toString().trim() === nombre &&
+        (fila[4] || "").toString().trim().toLowerCase() === "realizado"
+      )
       .sort((a, b) => new Date(a[0]) - new Date(b[0]));
 
     if (!sesiones.length) {
@@ -523,10 +526,10 @@ async function toggleSesiones(nombre) {
     visor.innerHTML = sesiones
       .map((fila, index) => {
         const fecha = fila[0] ? formatearFechaHora(fila[0]) : "Sin fecha";
-        const tratamiento = fila[2] || "Sin tratamiento";
+        const tratamiento = fila[3] || "Sin tratamiento";
         return `
           <div class="sesion-item">
-            <div><strong>Sesion ${index + 1}: ${escapeHtml(tratamiento)}</strong></div>
+            <div><strong>Sesión ${index + 1}: ${escapeHtml(tratamiento)}</strong></div>
             <div class="sesion-fecha">${escapeHtml(fecha)}</div>
           </div>
         `;

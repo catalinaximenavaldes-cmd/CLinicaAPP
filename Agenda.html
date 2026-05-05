@@ -131,6 +131,10 @@ let vistaActual = "hoy";
 let datosCompletos = [];
 const hoyLocal = new Date().toLocaleDateString("es-CL");
 
+function escapeJs(valor) {
+    return String(valor ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
 async function cargarAgenda() {
     try {
         const res = await fetch(URL + "?hoja=Agenda");
@@ -214,8 +218,8 @@ function crearCardCita(fila) {
                 <div class="acciones-container">
                 ${estado === "Realizado"
                     ? `<span class="check-icon">✅ Atendido</span>
-                       <button class="btn-anular" onclick="anularAtencion('${paciente}', '${tratamiento}')">Anular</button>`
-                    : `<button class="btn-atender" onclick="confirmarAtencion('${paciente}', '${tratamiento}')">Atender</button>
+                       <button class="btn-anular" onclick="anularAtencion('${escapeJs(paciente)}', '${escapeJs(tratamiento)}', '${escapeJs(fecha)}', '${escapeJs(hora)}')">Anular</button>`
+                    : `<button class="btn-atender" onclick="confirmarAtencion('${escapeJs(paciente)}', '${escapeJs(tratamiento)}', '${escapeJs(fecha)}', '${escapeJs(hora)}')">Atender</button>
                        <button class="btn-eliminar" onclick="borrarCita('${paciente}', '${tratamiento}')">Borrar</button>`}
             </div>
         </div>
@@ -255,9 +259,9 @@ function filtrarPorCalendario() {
     renderizarAgenda(filtradas);
 }
 
-async function confirmarAtencion(paciente, tratamiento) {
+async function confirmarAtencion(paciente, tratamiento, fecha, hora) {
     if (!confirm(`¿Confirmar atención de ${paciente}?`)) return;
-    await enviarPeticion({ accion: "confirmarAsistenciaDesdeAgenda", paciente, tratamiento });
+    await enviarPeticion({ accion: "confirmarAsistenciaDesdeAgenda", paciente, tratamiento, fecha, hora });
 }
 
 async function borrarCita(paciente, tratamiento) {
@@ -265,9 +269,9 @@ async function borrarCita(paciente, tratamiento) {
     await enviarPeticion({ accion: "eliminarCita", paciente, tratamiento });
 }
 
-async function anularAtencion(paciente, tratamiento) {
+async function anularAtencion(paciente, tratamiento, fecha, hora) {
     if (!confirm(`¿Anular atención de ${paciente}? Esto revertirá el stock.`)) return;
-    await enviarPeticion({ accion: "anularAtencion", paciente, tratamiento });
+    await enviarPeticion({ accion: "anularAtencion", paciente, tratamiento, fecha, hora });
 }
 
 async function enviarPeticion(datos) {

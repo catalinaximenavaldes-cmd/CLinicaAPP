@@ -23,7 +23,7 @@
     </header>
 
     <div class="main-content">
-        <button type="button" class="btn-inicio" onclick="window.location.href='index.html'">ðŸ  Inicio</button>
+        <button type="button" class="btn-inicio" onclick="window.location.href='index.html'">Inicio</button>
         <hr>
         <h2>Ingreso de nuevo paciente</h2>
 
@@ -44,7 +44,7 @@
         </div><br>
 
         <div class="container">
-            DirecciÃ³n:<br>
+            Dirección:<br>
             <input type="text" id="direccion" placeholder="Calle Falsa 123">
         </div><br>
 
@@ -65,12 +65,12 @@
 
         <div class="container">
             Motivo de consulta:<br>
-            <input type="text" id="motivo_consulta" placeholder="Ej: Dolor lumbar de 3 dÃ­as de evoluciÃ³n">
+            <input type="text" id="motivo_consulta" placeholder="Ej: Dolor lumbar de 3 días de evolución">
         </div><br>
 
-        <button onclick="guardarPaciente()" class="btn-guardar">ðŸ’¾ Guardar Paciente</button>
+        <button onclick="guardarPaciente()" class="btn-guardar">Guardar Paciente</button>
         <br><br>
-        <button onclick="window.history.back()" type="button" style="background:none; border:none; text-decoration:underline; cursor:pointer; color:#7f8c8d;">â¬…ï¸ Volver atrÃ¡s</button>
+        <button onclick="window.history.back()" type="button" style="background:none; border:none; text-decoration:underline; cursor:pointer; color:#7f8c8d;">Volver atrás</button>
     </div>
 
 <script src="url.js"></script>
@@ -82,7 +82,7 @@ function mostrarEdadCalculada(fecha) {
     let edad = hoy.getFullYear() - cumple.getFullYear();
     const m = hoy.getMonth() - cumple.getMonth();
     if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) edad--;
-    document.getElementById("preview_edad").innerText = "Edad estimada: " + edad + " aÃ±os";
+    document.getElementById("preview_edad").innerText = "Edad estimada: " + edad + " años";
 }
 
 function formatearRut(input) {
@@ -110,7 +110,7 @@ async function guardarPaciente() {
     }
 
     const btn = document.querySelector(".btn-guardar");
-    btn.innerText = "â³ Guardando...";
+    btn.innerText = "Guardando...";
     btn.disabled = true;
 
     const datosPaciente = {
@@ -132,15 +132,14 @@ async function guardarPaciente() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(datosPaciente)
         });
-        alert("âœ… Paciente guardado con Ã©xito.");
+        alert("Paciente guardado con éxito.");
         window.location.href = "index.html";
     } catch (error) {
         alert("Error al conectar.");
-        btn.innerText = "ðŸ’¾ Guardar Paciente";
+        btn.innerText = "Guardar Paciente";
         btn.disabled = false;
     }
 }
 </script>
 </body>
 </html>
-

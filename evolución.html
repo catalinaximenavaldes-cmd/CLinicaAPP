@@ -3,12 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nueva Evolución - CliniBienVital</title>
+    <title>Nueva Evolucion - CliniBienVital</title>
     <link rel="stylesheet" href="estilos.css">
     <style>
-        .textarea-evolucion { width: 100%; height: 300px; padding: 15px; box-sizing: border-box; border: 2px solid #34495e; border-radius: 8px; resize: vertical; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 16px; line-height: 1.5; margin-top: 10px; }
-        .paciente-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dee2e6; border-left: 8px solid #27ae60; }
-        .datos-secundarios { font-size: 14px; color: #7f8c8d; margin-top: 5px; }
+        .textarea-evolucion {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            box-sizing: border-box;
+            border: 2px solid #34495e;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            margin-top: 10px;
+        }
+        .paciente-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+            border-left: 8px solid #27ae60;
+        }
+        .datos-secundarios {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
@@ -20,98 +44,127 @@
     </header>
 
     <div class="main-content">
-        <button class="btn-volver" onclick="window.location.href='pacientes.html'">⬅️ Volver al Historial</button>
+        <button class="btn-volver" onclick="window.location.href='pacientes.html'">Volver al Historial</button>
         <hr>
         <div class="paciente-box">
-            <strong>Ficha de atención:</strong>
+            <strong>Ficha de atencion:</strong>
             <div id="nombre-paciente" style="font-size: 22px; color: #2c3e50; font-weight: bold;">Cargando nombre...</div>
             <div id="detalles-paciente" class="datos-secundarios">Buscando datos del paciente...</div>
         </div>
-        <h3>Redactar Evolución Clínica</h3>
-        <textarea id="resultado" class="textarea-evolucion" placeholder="Escriba aquí la evolución del paciente, novedades, constantes vitales y plan de tratamiento..."></textarea>
-        <button class="btn-guardar" onclick="guardarEvolucion()">💾 Guardar en Ficha Clínica</button>
+
+        <h3>Redactar Evolucion Clinica</h3>
+        <textarea id="resultado" class="textarea-evolucion" placeholder="Escriba aqui la evolucion del paciente, novedades, constantes vitales y plan de tratamiento..."></textarea>
+        <button class="btn-guardar" onclick="guardarEvolucion()">Guardar en Ficha Clinica</button>
         <br><br>
         <button onclick="window.history.back()" style="background: none; border: none; color: #7f8c8d; cursor: pointer; text-decoration: underline;">Cancelar y volver</button>
     </div>
 
-<script src="url.js"></script>
-<script>
-const URL = CONFIG.API_URL;
-const pacienteActual = localStorage.getItem("pacienteActual");
+    <script src="url.js"></script>
+    <script>
+        const URL = CONFIG.API_URL;
+        const pacienteActual = localStorage.getItem("pacienteActual");
 
-if (!pacienteActual) {
-    alert("Error: No se ha seleccionado un paciente.");
-    window.location.href = "pacientes.html";
-} else {
-    document.getElementById("nombre-paciente").innerText = "👤 " + pacienteActual;
-    cargarDatosPaciente();
-}
-
-function cargarDatosPaciente() {
-    fetch(URL)
-    .then(res => res.json())
-    .then(data => {
-        const registro = data.find(fila => fila[1] === pacienteActual);
-        if (registro) {
-            document.getElementById("detalles-paciente").innerHTML = `
-                🆔 <b>RUT:</b> ${registro[2] || 'N/A'} | 🎂 <b>Fecha de nacimiento:</b> ${registro[3] || 'N/A'} <br>
-                📅 <b>Edad:</b> ${registro[4] || 'N/A'} años | 🏠 <b>Dirección:</b> ${registro[5] || 'N/A'}
-            `;
-        } else {
-            document.getElementById("detalles-paciente").innerText = "No se encontraron datos básicos del paciente.";
+        function formatearFechaNacimiento(valor) {
+            if (!valor) return "N/A";
+            if (typeof valor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+                const [anio, mes, dia] = valor.split("-");
+                return `${dia}/${mes}/${anio}`;
+            }
+            const fecha = new Date(valor);
+            if (Number.isNaN(fecha.getTime())) return valor;
+            return fecha.toLocaleDateString("es-CL");
         }
-    })
-    .catch(err => {
-        console.error("Error al cargar datos:", err);
-        document.getElementById("detalles-paciente").innerText = "Error de conexión con la base de datos.";
-    });
-}
 
-function enviarDatosAppsScript(datos) {
-    const payload = JSON.stringify(datos);
+        function calcularEdadDesdeFecha(valor) {
+            const fecha = new Date(valor);
+            if (Number.isNaN(fecha.getTime())) return "N/A";
 
-    if (navigator.sendBeacon) {
-        const blob = new Blob([payload], { type: "text/plain;charset=UTF-8" });
-        const enviado = navigator.sendBeacon(URL, blob);
-        return enviado ? Promise.resolve() : Promise.reject(new Error("No se pudo encolar el envio."));
-    }
+            const hoy = new Date();
+            let edad = hoy.getFullYear() - fecha.getFullYear();
+            const mes = hoy.getMonth() - fecha.getMonth();
 
-    return fetch(URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=UTF-8" },
-        body: payload
-    }).then(() => undefined);
-}
+            if (mes < 0 || (mes === 0 && hoy.getDate() < fecha.getDate())) {
+                edad--;
+            }
 
-function guardarEvolucion() {
-    const evolucion = document.getElementById("resultado").value;
-    if (!evolucion.trim()) {
-        alert("Por favor, redacte la evolución antes de guardar.");
-        return;
-    }
+            return edad >= 0 ? edad : "N/A";
+        }
 
-    const btn = document.querySelector(".btn-guardar");
-    btn.innerText = "⏳ Guardando en ficha...";
-    btn.disabled = true;
+        if (!pacienteActual) {
+            alert("Error: No se ha seleccionado un paciente.");
+            window.location.href = "pacientes.html";
+        } else {
+            document.getElementById("nombre-paciente").innerText = pacienteActual;
+            cargarDatosPaciente();
+        }
 
-    const datos = {
-        nombre: pacienteActual,
-        accion: "guardarEvolucionNueva",
-        evolucion: evolucion
-    };
+        function cargarDatosPaciente() {
+            fetch(URL)
+                .then(res => res.json())
+                .then(data => {
+                    const registro = data.find(fila => fila[1] === pacienteActual);
+                    if (registro) {
+                        const fechaNacimiento = formatearFechaNacimiento(registro[3]);
+                        const edad = registro[4] || calcularEdadDesdeFecha(registro[3]);
+                        document.getElementById("detalles-paciente").innerHTML = `
+                            <b>RUT:</b> ${registro[2] || "N/A"} | <b>Fecha de nacimiento:</b> ${fechaNacimiento} <br>
+                            <b>Edad:</b> ${edad} anos | <b>Direccion:</b> ${registro[5] || "N/A"}
+                        `;
+                    } else {
+                        document.getElementById("detalles-paciente").innerText = "No se encontraron datos basicos del paciente.";
+                    }
+                })
+                .catch(err => {
+                    console.error("Error al cargar datos:", err);
+                    document.getElementById("detalles-paciente").innerText = "Error de conexion con la base de datos.";
+                });
+        }
 
-    enviarDatosAppsScript(datos)
-    .then(() => {
-        alert("✅ Evolución guardada correctamente.");
-        window.location.href = "pacientes.html";
-    })
-    .catch(err => {
-        alert("❌ Error al guardar: " + err);
-        btn.innerText = "💾 Guardar en Ficha Clínica";
-        btn.disabled = false;
-    });
-}
-</script>
+        function enviarDatosAppsScript(datos) {
+            const payload = JSON.stringify(datos);
+
+            if (navigator.sendBeacon) {
+                const blob = new Blob([payload], { type: "text/plain;charset=UTF-8" });
+                const enviado = navigator.sendBeacon(URL, blob);
+                return enviado ? Promise.resolve() : Promise.reject(new Error("No se pudo encolar el envio."));
+            }
+
+            return fetch(URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain;charset=UTF-8" },
+                body: payload
+            }).then(() => undefined);
+        }
+
+        function guardarEvolucion() {
+            const evolucion = document.getElementById("resultado").value;
+            if (!evolucion.trim()) {
+                alert("Por favor, redacte la evolucion antes de guardar.");
+                return;
+            }
+
+            const btn = document.querySelector(".btn-guardar");
+            btn.innerText = "Guardando en ficha...";
+            btn.disabled = true;
+
+            const datos = {
+                nombre: pacienteActual,
+                accion: "guardarEvolucion",
+                evolucion: evolucion
+            };
+
+            enviarDatosAppsScript(datos)
+                .then(() => {
+                    alert("Evolucion guardada correctamente.");
+                    window.location.href = "pacientes.html";
+                })
+                .catch(err => {
+                    alert("Error al guardar: " + err);
+                    btn.innerText = "Guardar en Ficha Clinica";
+                    btn.disabled = false;
+                });
+        }
+    </script>
 </body>
 </html>

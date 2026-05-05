@@ -24,6 +24,10 @@
         .panel-carga label { display: block; font-weight: 700; color: #2c3e50; margin-bottom: 6px; }
         .panel-carga select { margin-top: 0; }
         .ayuda { grid-column: 1 / -1; font-size: 0.92rem; color: #5b6b7a; }
+        .documentos-container {
+            display: grid;
+            gap: 18px;
+        }
         .documento {
             background: #fff;
             max-width: 780px;
@@ -32,6 +36,7 @@
             box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
             color: #1f2933;
         }
+        .documento:last-child { margin-bottom: 0; }
         .encabezado-doc { text-align: center; margin-bottom: 28px; }
         .encabezado-doc h1 { margin: 0; font-size: 1.9rem; color: #1b2a41; }
         .encabezado-doc h2 { margin: 10px 0 8px; font-size: 1.2rem; font-style: italic; font-weight: 500; }
@@ -72,6 +77,13 @@
             border-radius: 0;
             background: transparent;
         }
+        .detalle-kinesiologia {
+            margin-top: 8px;
+            padding-left: 18px;
+            color: #52606d;
+            font-size: 0.95rem;
+        }
+        .detalle-kinesiologia li { margin-bottom: 4px; }
         .col-n { width: 48px; }
         .col-cantidad { width: 90px; }
         .col-codigo { width: 130px; }
@@ -105,10 +117,12 @@
         }
         .estado { margin-top: 10px; color: #52606d; font-size: 0.92rem; }
         @media print {
-            .app-header, .barra-acciones, .panel-carga { display: none !important; }
+            .app-header, .barra-acciones, .panel-carga, .estado { display: none !important; }
             body { background: #fff; }
             .panel-prestaciones { margin: 0; max-width: none; }
             .documento { box-shadow: none; margin: 0; max-width: none; padding: 22px 28px; }
+            .documento { page-break-after: always; break-after: page; }
+            .documento:last-child { page-break-after: auto; break-after: auto; }
         }
         @media (max-width: 760px) {
             .panel-carga, .fila-dato, .fechas-box { grid-template-columns: 1fr; gap: 8px; }
@@ -144,10 +158,14 @@
                 <button class="btn-guardar" onclick="cargarPacienteSeleccionado()">Cargar Datos</button>
             </div>
             <div class="ayuda">
-                Este resumen usa solo las fechas de sesiones realizadas. Si la paciente tiene 7 sesiones se aplica el pack 7; si tiene 10 o más, se aplica el pack 10.
+                Esta pagina mantiene el resumen general y ademas genera una segunda seccion con una pagina por cada sesion registrada.
             </div>
         </div>
 
+        <div class="titulo-seccion">Documentos por sesion</div>
+        <div id="documentos-container" class="documentos-container"></div>
+
+        <div class="titulo-seccion">Resumen general</div>
         <div class="documento">
             <div class="encabezado-doc">
                 <h1>SERVIREP EIRL</h1>
@@ -205,31 +223,18 @@
                     </tr>
                     <tr>
                         <td>2)</td>
-                        <td><input id="prestacion-2" value="Ultrasonido"></td>
+                        <td>
+                            <input id="prestacion-2" value="Kinesiologia">
+                            <ul class="detalle-kinesiologia">
+                                <li>Ultrasonido</li>
+                                <li>Ultratermia</li>
+                                <li>Masoterapia</li>
+                                <li>Laserterapia</li>
+                            </ul>
+                        </td>
                         <td><input id="cantidad-2" value="x 10"></td>
-                        <td><input id="codigo-2" value="0601011"></td>
-                        <td><input id="total-2" value="111375"></td>
-                    </tr>
-                    <tr>
-                        <td>3)</td>
-                        <td><input id="prestacion-3" value="Ultra termia"></td>
-                        <td><input id="cantidad-3" value="x 10"></td>
-                        <td><input id="codigo-3" value="0601009"></td>
-                        <td><input id="total-3" value="111375"></td>
-                    </tr>
-                    <tr>
-                        <td>4)</td>
-                        <td><input id="prestacion-4" value="Masoterapia"></td>
-                        <td><input id="cantidad-4" value="x 10"></td>
-                        <td><input id="codigo-4" value="0601022"></td>
-                        <td><input id="total-4" value="111375"></td>
-                    </tr>
-                    <tr>
-                        <td>5)</td>
-                        <td><input id="prestacion-5" value="Laserterapia"></td>
-                        <td><input id="cantidad-5" value="x 10"></td>
-                        <td><input id="codigo-5" value="0601008"></td>
-                        <td><input id="total-5" value="111375"></td>
+                        <td><input id="codigo-2" value="0601105"></td>
+                        <td><input id="total-2" value="436500"></td>
                     </tr>
                 </tbody>
             </table>
@@ -247,8 +252,9 @@
                 <textarea id="fechas-prestaciones"></textarea>
             </div>
 
-            <div id="estado-carga" class="estado"></div>
+            <div id="estado-carga-antiguo" class="estado"></div>
         </div>
+        <div id="estado-carga" class="estado"></div>
     </div>
 
     <script src="url.js"></script>
@@ -256,34 +262,56 @@
         const URL_BASE = CONFIG.API_URL;
         const pacientesMap = {};
         const sesionesMap = {};
+        const VALOR_EVALUACION = 10000;
+        const VALOR_KINESIOLOGIA = 43650;
         const PACKS = {
             7: {
-                cantidades: ["x 2", "x 7", "x 7", "x 7", "x 7"],
-                totales: ["20000", "90375", "90375", "90375", "90375"]
+                cantidades: ["x 2", "x 7"]
             },
             10: {
-                cantidades: ["x 2", "x 10", "x 10", "x 10", "x 10"],
-                totales: ["20000", "111375", "111375", "111375", "111375"]
+                cantidades: ["x 2", "x 10"]
             }
         };
 
         function normalizarFecha(valor) {
+            if (!valor) return null;
+            if (typeof valor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+                const [anio, mes, dia] = valor.split("-").map(Number);
+                return new Date(anio, mes - 1, dia);
+            }
             const fecha = new Date(valor);
             return Number.isNaN(fecha.getTime()) ? null : fecha;
+        }
+
+        function normalizarTexto(valor) {
+            return String(valor || "").trim().toLowerCase();
         }
 
         function formatearListaFechas(fechas) {
             if (!fechas.length) return "";
             const fechasOrdenadas = [...fechas].sort((a, b) => a - b);
-            const ultimo = fechasOrdenadas[fechasOrdenadas.length - 1];
-            const dias = fechasOrdenadas.map(fecha => fecha.getDate());
-            const mes = ultimo.toLocaleDateString("es-CL", { month: "long" });
-            const anio = ultimo.getFullYear();
-            return `${dias.join(",")} de ${mes} del ${anio}`;
+            return fechasOrdenadas
+                .map(fecha => fecha.toLocaleDateString("es-CL", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric"
+                }))
+                .join(", ");
         }
 
         function actualizarEstado(texto) {
             document.getElementById("estado-carga").innerText = texto || "";
+        }
+
+        function solicitarNumeroBoleta() {
+            const inputBoleta = document.getElementById("numero-boleta");
+            const valorActual = (inputBoleta.value || "").trim();
+            const numeroBoleta = prompt("Ingrese el número de boleta para este resumen:", valorActual);
+
+            if (numeroBoleta === null) return false;
+
+            inputBoleta.value = numeroBoleta.trim();
+            return true;
         }
 
         function poblarPacientes() {
@@ -309,9 +337,53 @@
             });
         }
 
-        function recalcularTotalGeneral() {
+        function obtenerCantidadDesdeTexto(texto) {
+            const numero = parseInt(String(texto || "").replace(/[^\d]/g, ""), 10);
+            return Number.isNaN(numero) ? 0 : numero;
+        }
+
+        function agregarSesionRealizada(nombre, fecha) {
+            if (!nombre || !fecha || !pacientesMap[nombre]) return;
+            if (!sesionesMap[nombre]) sesionesMap[nombre] = [];
+            sesionesMap[nombre].push(fecha);
+        }
+
+        function cargarSesionesDesdeAgenda(filasAgenda) {
             let total = 0;
-            for (let i = 1; i <= 5; i++) {
+
+            filasAgenda.slice(1).forEach(fila => {
+                const nombre = (fila[2] || "").toString().trim();
+                const fecha = normalizarFecha(fila[0]);
+                const estado = normalizarTexto(fila[4]);
+
+                if (estado !== "realizado") return;
+                agregarSesionRealizada(nombre, fecha);
+                total++;
+            });
+
+            return total;
+        }
+
+        function cargarSesionesDesdeRegistro(filasSesiones) {
+            filasSesiones.slice(1).forEach(fila => {
+                const nombre = (fila[1] || "").toString().trim();
+                const fecha = normalizarFecha(fila[0]);
+                agregarSesionRealizada(nombre, fecha);
+            });
+        }
+
+        function actualizarTotalesPorCantidad() {
+            const cantidadEvaluacion = obtenerCantidadDesdeTexto(document.getElementById("cantidad-1").value);
+            const cantidadKinesiologia = obtenerCantidadDesdeTexto(document.getElementById("cantidad-2").value);
+
+            document.getElementById("total-1").value = String(cantidadEvaluacion * VALOR_EVALUACION);
+            document.getElementById("total-2").value = String(cantidadKinesiologia * VALOR_KINESIOLOGIA);
+        }
+
+        function recalcularTotalGeneral() {
+            actualizarTotalesPorCantidad();
+            let total = 0;
+            for (let i = 1; i <= 2; i++) {
                 total += leerNumero(document.getElementById(`total-${i}`).value);
             }
             document.getElementById("total-general").value = `$ ${formatearEntero(total)}`;
@@ -322,18 +394,13 @@
 
             if (!pack) {
                 document.getElementById("cantidad-1").value = "x 2";
-                document.getElementById("total-1").value = "20000";
-                for (let i = 2; i <= 5; i++) {
-                    document.getElementById(`cantidad-${i}`).value = `x ${cantidadSesiones}`;
-                    document.getElementById(`total-${i}`).value = "";
-                }
+                document.getElementById("cantidad-2").value = `x ${cantidadSesiones}`;
                 recalcularTotalGeneral();
                 return 0;
             }
 
-            for (let i = 1; i <= 5; i++) {
+            for (let i = 1; i <= 2; i++) {
                 document.getElementById(`cantidad-${i}`).value = pack.cantidades[i - 1];
-                document.getElementById(`total-${i}`).value = pack.totales[i - 1];
             }
             recalcularTotalGeneral();
             return cantidadSesiones >= 10 ? 10 : 7;
@@ -370,22 +437,20 @@
 
         Promise.all([
             fetch(URL_BASE + "?tabla=Hoja 1").then(res => res.json()),
-            fetch(URL_BASE + "?tabla=Sesiones").then(res => res.json())
+            fetch(URL_BASE + "?tabla=Agenda").then(res => res.json()).catch(() => []),
+            fetch(URL_BASE + "?tabla=Sesiones").then(res => res.json()).catch(() => [])
         ])
-        .then(([activos, sesionesActivas]) => {
+        .then(([activos, agenda, sesionesActivas]) => {
             activos.slice(1).forEach(fila => {
                 const nombre = (fila[1] || "").toString().trim();
                 if (!nombre || pacientesMap[nombre]) return;
                 pacientesMap[nombre] = { rut: fila[2] || "" };
             });
 
-            sesionesActivas.slice(1).forEach(fila => {
-                const nombre = (fila[1] || "").toString().trim();
-                const fecha = normalizarFecha(fila[0]);
-                if (!nombre || !fecha || !pacientesMap[nombre]) return;
-                if (!sesionesMap[nombre]) sesionesMap[nombre] = [];
-                sesionesMap[nombre].push(fecha);
-            });
+            const sesionesDesdeAgenda = Array.isArray(agenda) ? cargarSesionesDesdeAgenda(agenda) : 0;
+            if (!sesionesDesdeAgenda && Array.isArray(sesionesActivas)) {
+                cargarSesionesDesdeRegistro(sesionesActivas);
+            }
 
             poblarPacientes();
             recalcularTotalGeneral();
@@ -395,6 +460,149 @@
             console.error("Error al cargar datos:", error);
             actualizarEstado("No se pudieron cargar pacientes y sesiones.");
         });
+    </script>
+    <script>
+        const CODIGO_EVALUACION = "0601001";
+        const CODIGO_KINESIOLOGIA = "0601105";
+        const PRESTACIONES_KINESIOLOGIA = ["Ultrasonido", "Ultratermia", "Masoterapia", "Laserterapia"];
+
+        function formatearFechaSesion(fecha) {
+            return fecha.toLocaleDateString("es-CL", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric"
+            });
+        }
+
+        function crearFilaPrestacionSesion(numero, nombre, codigo, total, incluirDetalle) {
+            const detalle = incluirDetalle
+                ? `
+                    <ul class="detalle-kinesiologia">
+                        ${PRESTACIONES_KINESIOLOGIA.map(item => `<li>${item}</li>`).join("")}
+                    </ul>
+                `
+                : "";
+
+            return `
+                <tr>
+                    <td>${numero})</td>
+                    <td>${nombre}${detalle}</td>
+                    <td>x 1</td>
+                    <td>${codigo}</td>
+                    <td>${formatearEntero(total)}</td>
+                </tr>
+            `;
+        }
+
+        function crearDocumentoSesion(nombre, rutPaciente, fechaSesion, numeroSesion) {
+            const incluyeEvaluacion = numeroSesion === 1 || numeroSesion === 5;
+            const numeroBoleta = document.getElementById("numero-boleta").value || "";
+            const filas = [];
+            let total = 0;
+
+            if (incluyeEvaluacion) {
+                filas.push(
+                    crearFilaPrestacionSesion(1, "Evaluacion", CODIGO_EVALUACION, VALOR_EVALUACION, false)
+                );
+                total += VALOR_EVALUACION;
+            }
+
+            filas.push(
+                crearFilaPrestacionSesion(
+                    incluyeEvaluacion ? 2 : 1,
+                    "Kinesiologia",
+                    CODIGO_KINESIOLOGIA,
+                    VALOR_KINESIOLOGIA,
+                    true
+                )
+            );
+            total += VALOR_KINESIOLOGIA;
+
+            return `
+                <div class="documento">
+                    <div class="encabezado-doc">
+                        <h1>SERVIREP EIRL</h1>
+                        <h2>Servicios Integrales de Rehabilitacion Personalizados</h2>
+                        <p>Servicios Medicos, Paramedicos, Rehabilitacion y acondicionamiento Fisico. Rut 52001323-7. Telefono: 222660036. Avenida Echenique 5037, Nunoa Santiago de Chile.</p>
+                    </div>
+
+                    <div class="seccion-datos">
+                        <div class="fila-dato"><label>Nombre del Paciente:</label><input value="${nombre}"></div>
+                        <div class="fila-dato"><label>Rut del Paciente:</label><input value="${rutPaciente}"></div>
+                        <div class="fila-dato"><label>Rut medico tratante:</label><input value="14660564-8"></div>
+                        <div class="fila-dato"><label>Rut Prestador:</label><input value="52001323-7"></div>
+                        <div class="fila-dato"><label>Rut. Kinesiologo:</label><input value="14694500-7"></div>
+                        <div class="fila-dato"><label>N de Boleta:</label><input value="${numeroBoleta}"></div>
+                        <div class="fila-dato"><label>Sesion:</label><input value="${numeroSesion}"></div>
+                    </div>
+
+                    <div class="titulo-seccion">Resumen de servicios prestados:</div>
+
+                    <div class="tabla-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="col-n">N</th>
+                                    <th>Prestacion</th>
+                                    <th class="col-cantidad">Cantidad</th>
+                                    <th class="col-codigo">Codigo</th>
+                                    <th class="col-total">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>${filas.join("")}</tbody>
+                        </table>
+                    </div>
+
+                    <div class="totales">
+                        <div class="total-box">
+                            <span>Total</span>
+                            <span>$ ${formatearEntero(total)}</span>
+                        </div>
+                    </div>
+
+                    <div class="fechas-box">
+                        <label>Fecha prestacion:</label>
+                        <textarea>${formatearFechaSesion(fechaSesion)}</textarea>
+                    </div>
+                </div>
+            `;
+        }
+
+        const cargarResumenGeneral = cargarPacienteSeleccionado;
+
+        cargarPacienteSeleccionado = function() {
+            const nombre = document.getElementById("selector-paciente").value;
+            const contenedor = document.getElementById("documentos-container");
+
+            if (!nombre) {
+                contenedor.innerHTML = "";
+                actualizarEstado("Seleccione una paciente para cargar el documento.");
+                return;
+            }
+
+            if (!solicitarNumeroBoleta()) {
+                actualizarEstado("Generación de resumen cancelada.");
+                return;
+            }
+
+            cargarResumenGeneral();
+
+            const datosPaciente = pacientesMap[nombre] || {};
+            const sesiones = (sesionesMap[nombre] || []).filter(Boolean).sort((a, b) => a - b);
+
+            if (!sesiones.length) {
+                contenedor.innerHTML = "";
+                actualizarEstado(`La paciente ${nombre} no tiene sesiones registradas en las tablas consultadas.`);
+                return;
+            }
+
+            contenedor.innerHTML = sesiones
+                .map((fechaSesion, index) => crearDocumentoSesion(nombre, datosPaciente.rut || "", fechaSesion, index + 1))
+                .join("");
+
+            const detalleEvaluacion = sesiones.length >= 5 ? "sesion 1 y sesion 5" : "sesion 1";
+            actualizarEstado(`Se generaron ${sesiones.length} paginas para ${nombre}, con evaluacion en ${detalleEvaluacion}.`);
+        };
     </script>
 </body>
 </html>
