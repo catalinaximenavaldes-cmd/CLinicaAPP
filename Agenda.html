@@ -129,10 +129,47 @@
 const URL = CONFIG.API_URL;
 let vistaActual = "hoy";
 let datosCompletos = [];
-const hoyLocal = new Date().toLocaleDateString("es-CL");
+const hoyLocal = formatearFechaAgenda(new Date());
 
 function escapeJs(valor) {
     return String(valor ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+function normalizarFechaInput(valor) {
+    if (!valor) return "";
+    if (typeof valor === "string") {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return valor;
+        if (/^\d{4}-\d{2}-\d{2}T/.test(valor)) return valor.slice(0, 10);
+    }
+
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return "";
+
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dia = String(fecha.getDate()).padStart(2, "0");
+    return `${anio}-${mes}-${dia}`;
+}
+
+function formatearFechaAgenda(valor) {
+    const fechaIso = normalizarFechaInput(valor);
+    if (!fechaIso) return "Sin fecha";
+
+    const [anio, mes, dia] = fechaIso.split("-");
+    return `${dia}/${mes}/${anio}`;
+}
+
+function formatearHoraAgenda(valor) {
+    let hora = (valor || "").toString().trim().replace(/^'/, "");
+    if (!hora) return "";
+
+    if (hora.includes("T")) {
+        hora = hora.split("T")[1].substring(0, 5);
+    } else {
+        hora = hora.substring(0, 5);
+    }
+
+    return hora;
 }
 
 async function cargarAgenda() {
@@ -157,7 +194,7 @@ function renderizarAgenda(citasPersonalizadas = null) {
         if (vistaActual === "hoy") {
             etiquetaFecha.innerText = "Citas para hoy: " + hoyLocal;
             listaFiltrada = datosCompletos.filter(fila => {
-                const fechaCita = new Date(fila[0]).toLocaleDateString("es-CL");
+                const fechaCita = formatearFechaAgenda(fila[0]);
                 return fechaCita === hoyLocal;
             });
         } else {
@@ -199,14 +236,8 @@ function renderizarAgenda(citasPersonalizadas = null) {
 
 function crearCardCita(fila) {
     const [fecha, hora, paciente, tratamiento, estado] = fila;
-    const fechaCita = new Date(fecha).toLocaleDateString("es-CL");
-
-    let horaLimpia = (hora || "").toString();
-    if (horaLimpia.includes("T")) {
-        horaLimpia = horaLimpia.split("T")[1].substring(0, 5);
-    } else {
-        horaLimpia = horaLimpia.substring(0, 5);
-    }
+    const fechaCita = formatearFechaAgenda(fecha);
+    const horaLimpia = formatearHoraAgenda(hora);
 
     return `
         <div class="cita-card ${estado === "Realizado" ? "estado-realizado" : ""}">
@@ -220,7 +251,7 @@ function crearCardCita(fila) {
                     ? `<span class="check-icon">✅ Atendido</span>
                        <button class="btn-anular" onclick="anularAtencion('${escapeJs(paciente)}', '${escapeJs(tratamiento)}', '${escapeJs(fecha)}', '${escapeJs(hora)}')">Anular</button>`
                     : `<button class="btn-atender" onclick="confirmarAtencion('${escapeJs(paciente)}', '${escapeJs(tratamiento)}', '${escapeJs(fecha)}', '${escapeJs(hora)}')">Atender</button>
-                       <button class="btn-eliminar" onclick="borrarCita('${paciente}', '${tratamiento}')">Borrar</button>`}
+                       <button class="btn-eliminar" onclick="borrarCita('${escapeJs(paciente)}', '${escapeJs(tratamiento)}', '${escapeJs(fecha)}', '${escapeJs(hora)}')">Borrar</button>`}
             </div>
         </div>
     `;
@@ -244,11 +275,10 @@ function filtrarPorCalendario() {
     const fechaSeleccionada = document.getElementById("input-fecha").value;
     if (!fechaSeleccionada) return;
 
-    const [y, m, d] = fechaSeleccionada.split("-");
-    const fechaBusqueda = new Date(y, m - 1, d).toLocaleDateString("es-CL");
+    const fechaBusqueda = formatearFechaAgenda(fechaSeleccionada);
 
     const filtradas = datosCompletos.filter(fila => {
-        const fechaCita = new Date(fila[0]).toLocaleDateString("es-CL");
+        const fechaCita = formatearFechaAgenda(fila[0]);
         return fechaCita === fechaBusqueda;
     });
 
@@ -264,9 +294,9 @@ async function confirmarAtencion(paciente, tratamiento, fecha, hora) {
     await enviarPeticion({ accion: "confirmarAsistenciaDesdeAgenda", paciente, tratamiento, fecha, hora });
 }
 
-async function borrarCita(paciente, tratamiento) {
+async function borrarCita(paciente, tratamiento, fecha, hora) {
     if (!confirm(`¿Eliminar cita de ${paciente}?`)) return;
-    await enviarPeticion({ accion: "eliminarCita", paciente, tratamiento });
+    await enviarPeticion({ accion: "eliminarCita", paciente, tratamiento, fecha, hora });
 }
 
 async function anularAtencion(paciente, tratamiento, fecha, hora) {

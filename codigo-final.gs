@@ -103,12 +103,21 @@ function doPost(e) {
       var dAgenda = hojaAgendaEliminar.getDataRange().getValues();
       var pacienteEliminar = (data.paciente || "").toString().trim();
       var tratamientoEliminar = (data.tratamiento || "").toString().trim();
+      var fechaEliminar = normalizarFechaAgenda(data.fecha);
+      var horaEliminar = normalizarHoraAgenda(data.hora);
 
       for (var k = dAgenda.length - 1; k >= 1; k--) {
+        var fechaFilaEliminar = normalizarFechaAgenda(dAgenda[k][0]);
+        var horaFilaEliminar = normalizarHoraAgenda(dAgenda[k][1]);
         var pacienteFila = (dAgenda[k][2] || "").toString().trim();
         var tratamientoFila = (dAgenda[k][3] || "").toString().trim();
 
-        if (pacienteFila === pacienteEliminar && tratamientoFila === tratamientoEliminar) {
+        if (
+          pacienteFila === pacienteEliminar &&
+          tratamientoFila === tratamientoEliminar &&
+          (!fechaEliminar || fechaFilaEliminar === fechaEliminar) &&
+          (!horaEliminar || horaFilaEliminar === horaEliminar)
+        ) {
           hojaAgendaEliminar.deleteRow(k + 1);
           break;
         }

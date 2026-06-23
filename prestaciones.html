@@ -24,6 +24,56 @@
         .panel-carga label { display: block; font-weight: 700; color: #2c3e50; margin-bottom: 6px; }
         .panel-carga select { margin-top: 0; }
         .ayuda { grid-column: 1 / -1; font-size: 0.92rem; color: #5b6b7a; }
+        .selector-dias {
+            grid-column: 1 / -1;
+            background: #f8fafc;
+            border: 1px solid #d7dde3;
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .selector-dias-acciones {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 8px 0 10px;
+        }
+        .selector-dias-acciones button {
+            min-width: 0;
+            width: auto;
+            margin-top: 0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+        .lista-dias {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 8px;
+        }
+        .opcion-dia {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border: 1px solid #e1e7ef;
+            border-radius: 8px;
+            background: #fff;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        .opcion-dia input { width: auto; margin: 0; }
+        .panel-valores {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(180px, 1fr));
+            gap: 14px;
+            background: #f8fafc;
+            border: 1px solid #d7dde3;
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .panel-valores input { margin-top: 0; }
         .documentos-container {
             display: grid;
             gap: 18px;
@@ -116,15 +166,43 @@
             background: transparent;
         }
         .estado { margin-top: 10px; color: #52606d; font-size: 0.92rem; }
+        @page {
+            size: Letter;
+            margin: 9mm;
+        }
         @media print {
             .app-header, .barra-acciones, .panel-carga, .estado { display: none !important; }
-            body { background: #fff; }
+            html, body { margin: 0; padding: 0; background: #fff; }
             .panel-prestaciones { margin: 0; max-width: none; }
-            .documento { box-shadow: none; margin: 0; max-width: none; padding: 22px 28px; }
+            .panel-prestaciones > .titulo-seccion { display: none !important; }
+            .documento {
+                box-shadow: none;
+                margin: 0;
+                max-width: none;
+                padding: 14px 22px;
+                font-size: 0.96rem;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .encabezado-doc { margin-bottom: 18px; }
+            .encabezado-doc h1 { font-size: 1.85rem; }
+            .encabezado-doc h2 { font-size: 1.08rem; margin: 7px 0; }
+            .encabezado-doc p { margin-top: 9px; padding-top: 9px; line-height: 1.38; }
+            .seccion-datos { margin: 22px 0 14px; gap: 9px; }
+            .fila-dato { grid-template-columns: 205px 1fr; gap: 12px; }
+            .fila-dato input, .fila-dato textarea { padding: 5px 4px; font-size: 0.96rem; }
+            .titulo-seccion { margin: 16px 0 9px; font-size: 1.08rem; }
+            th, td { padding: 7px 5px; font-size: 0.92rem; }
+            .detalle-kinesiologia { margin-top: 5px; font-size: 0.9rem; }
+            .detalle-kinesiologia li { margin-bottom: 2px; }
+            .totales { margin-top: 16px; }
+            .total-box { font-size: 1.08rem; padding-top: 9px; }
+            .fechas-box { margin-top: 16px; grid-template-columns: 205px 1fr; gap: 12px; }
+            .fechas-box textarea { min-height: 42px; padding: 5px 4px; font-size: 0.96rem; }
             .documento { page-break-after: always; break-after: page; }
             .documento:last-child { page-break-after: auto; break-after: auto; }
         }
-        @media (max-width: 760px) {
+        @media screen and (max-width: 760px) {
             .panel-carga, .fila-dato, .fechas-box { grid-template-columns: 1fr; gap: 8px; }
             .documento { padding: 22px 18px; }
             .total-box { min-width: 0; width: 100%; }
@@ -150,12 +228,30 @@
         <div class="panel-carga">
             <div>
                 <label for="selector-paciente">Paciente</label>
-                <select id="selector-paciente">
+                <select id="selector-paciente" onchange="mostrarDiasPrestaciones()">
                     <option value="">Cargando pacientes...</option>
                 </select>
             </div>
             <div>
                 <button class="btn-guardar" onclick="cargarPacienteSeleccionado()">Cargar Datos</button>
+            </div>
+            <div class="panel-valores">
+                <div>
+                    <label for="valor-evaluacion">Precio evaluacion</label>
+                    <input id="valor-evaluacion" value="10000" oninput="recalcularTotalGeneral()">
+                </div>
+                <div>
+                    <label for="valor-kinesiologia">Precio kinesiologia</label>
+                    <input id="valor-kinesiologia" value="43650" oninput="recalcularTotalGeneral()">
+                </div>
+            </div>
+            <div id="selector-dias-container" class="selector-dias" style="display:none;">
+                <label>Dias de prestaciones a incluir</label>
+                <div class="selector-dias-acciones">
+                    <button type="button" onclick="seleccionarDiasPrestaciones(true)">Seleccionar todos</button>
+                    <button type="button" onclick="seleccionarDiasPrestaciones(false)">Limpiar seleccion</button>
+                </div>
+                <div id="lista-dias-prestaciones" class="lista-dias"></div>
             </div>
             <div class="ayuda">
                 Esta pagina mantiene el resumen general y ademas genera una segunda seccion con una pagina por cada sesion registrada.
@@ -299,6 +395,61 @@
                 .join(", ");
         }
 
+        function claveFecha(fecha) {
+            return fecha.toISOString();
+        }
+
+        function obtenerSesionesPaciente(nombre) {
+            return (sesionesMap[nombre] || []).filter(Boolean).sort((a, b) => a - b);
+        }
+
+        function seleccionarDiasPrestaciones(seleccionar) {
+            document.querySelectorAll(".check-dia-prestacion").forEach(check => {
+                check.checked = seleccionar;
+            });
+        }
+
+        function mostrarDiasPrestaciones() {
+            const nombre = document.getElementById("selector-paciente").value;
+            const contenedor = document.getElementById("selector-dias-container");
+            const lista = document.getElementById("lista-dias-prestaciones");
+            const sesiones = obtenerSesionesPaciente(nombre);
+
+            lista.innerHTML = "";
+
+            if (!nombre || !sesiones.length) {
+                contenedor.style.display = "none";
+                return;
+            }
+
+            sesiones.forEach((fecha, index) => {
+                const label = document.createElement("label");
+                label.className = "opcion-dia";
+                label.innerHTML = `
+                    <input type="checkbox" class="check-dia-prestacion" value="${claveFecha(fecha)}" checked>
+                    <span>${formatearFechaSesion(fecha)}</span>
+                `;
+                lista.appendChild(label);
+            });
+
+            contenedor.style.display = "block";
+        }
+
+        function obtenerSesionesSeleccionadas(nombre) {
+            const sesiones = obtenerSesionesPaciente(nombre);
+            const checks = Array.from(document.querySelectorAll(".check-dia-prestacion"));
+
+            if (!checks.length) return sesiones;
+
+            const fechasSeleccionadas = new Set(
+                checks
+                    .filter(check => check.checked)
+                    .map(check => check.value)
+            );
+
+            return sesiones.filter(fecha => fechasSeleccionadas.has(claveFecha(fecha)));
+        }
+
         function actualizarEstado(texto) {
             document.getElementById("estado-carga").innerText = texto || "";
         }
@@ -342,6 +493,16 @@
             return Number.isNaN(numero) ? 0 : numero;
         }
 
+        function obtenerValorEvaluacion() {
+            const input = document.getElementById("valor-evaluacion");
+            return leerNumero(input ? input.value : VALOR_EVALUACION);
+        }
+
+        function obtenerValorKinesiologia() {
+            const input = document.getElementById("valor-kinesiologia");
+            return leerNumero(input ? input.value : VALOR_KINESIOLOGIA);
+        }
+
         function agregarSesionRealizada(nombre, fecha) {
             if (!nombre || !fecha || !pacientesMap[nombre]) return;
             if (!sesionesMap[nombre]) sesionesMap[nombre] = [];
@@ -376,8 +537,8 @@
             const cantidadEvaluacion = obtenerCantidadDesdeTexto(document.getElementById("cantidad-1").value);
             const cantidadKinesiologia = obtenerCantidadDesdeTexto(document.getElementById("cantidad-2").value);
 
-            document.getElementById("total-1").value = String(cantidadEvaluacion * VALOR_EVALUACION);
-            document.getElementById("total-2").value = String(cantidadKinesiologia * VALOR_KINESIOLOGIA);
+            document.getElementById("total-1").value = String(cantidadEvaluacion * obtenerValorEvaluacion());
+            document.getElementById("total-2").value = String(cantidadKinesiologia * obtenerValorKinesiologia());
         }
 
         function recalcularTotalGeneral() {
@@ -414,7 +575,7 @@
             }
 
             const datosPaciente = pacientesMap[nombre] || {};
-            const sesiones = (sesionesMap[nombre] || []).filter(Boolean).sort((a, b) => a - b);
+            const sesiones = obtenerSesionesSeleccionadas(nombre);
             const cantidad = sesiones.length;
             const packAplicado = aplicarPack(cantidad);
 
@@ -423,7 +584,11 @@
             document.getElementById("fechas-prestaciones").value = formatearListaFechas(sesiones);
 
             if (!cantidad) {
-                actualizarEstado(`La paciente ${nombre} no tiene sesiones registradas en las tablas consultadas.`);
+                const tieneSesiones = obtenerSesionesPaciente(nombre).length > 0;
+                actualizarEstado(tieneSesiones
+                    ? "Seleccione al menos un dia de prestaciones para generar el resumen."
+                    : `La paciente ${nombre} no tiene sesiones registradas en las tablas consultadas.`
+                );
                 return;
             }
 
@@ -497,14 +662,16 @@
         function crearDocumentoSesion(nombre, rutPaciente, fechaSesion, numeroSesion) {
             const incluyeEvaluacion = numeroSesion === 1 || numeroSesion === 5;
             const numeroBoleta = document.getElementById("numero-boleta").value || "";
+            const valorEvaluacion = obtenerValorEvaluacion();
+            const valorKinesiologia = obtenerValorKinesiologia();
             const filas = [];
             let total = 0;
 
             if (incluyeEvaluacion) {
                 filas.push(
-                    crearFilaPrestacionSesion(1, "Evaluacion", CODIGO_EVALUACION, VALOR_EVALUACION, false)
+                    crearFilaPrestacionSesion(1, "Evaluacion", CODIGO_EVALUACION, valorEvaluacion, false)
                 );
-                total += VALOR_EVALUACION;
+                total += valorEvaluacion;
             }
 
             filas.push(
@@ -512,11 +679,11 @@
                     incluyeEvaluacion ? 2 : 1,
                     "Kinesiologia",
                     CODIGO_KINESIOLOGIA,
-                    VALOR_KINESIOLOGIA,
+                    valorKinesiologia,
                     true
                 )
             );
-            total += VALOR_KINESIOLOGIA;
+            total += valorKinesiologia;
 
             return `
                 <div class="documento">
@@ -588,11 +755,15 @@
             cargarResumenGeneral();
 
             const datosPaciente = pacientesMap[nombre] || {};
-            const sesiones = (sesionesMap[nombre] || []).filter(Boolean).sort((a, b) => a - b);
+            const sesiones = obtenerSesionesSeleccionadas(nombre);
 
             if (!sesiones.length) {
                 contenedor.innerHTML = "";
-                actualizarEstado(`La paciente ${nombre} no tiene sesiones registradas en las tablas consultadas.`);
+                const tieneSesiones = obtenerSesionesPaciente(nombre).length > 0;
+                actualizarEstado(tieneSesiones
+                    ? "Seleccione al menos un dia de prestaciones para generar el documento."
+                    : `La paciente ${nombre} no tiene sesiones registradas en las tablas consultadas.`
+                );
                 return;
             }
 

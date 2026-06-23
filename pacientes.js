@@ -1,7 +1,7 @@
 ﻿const URL =
   typeof CONFIG !== "undefined" && CONFIG.API_URL
     ? CONFIG.API_URL
-    : "https://script.google.com/macros/s/AKfycbz_o5PPXlSY8Q7kcIwKjVETz5m-lhU7TxZO84bo9OSE8zf8qsB0Fd6kijopc4gWy94/exec";
+    : "https://script.google.com/macros/s/AKfycbxwQAqJRmzsB7fDsq7twILzVbQQES1gUsE46SrYmeTcCuhwluumR-70DE78pJrvw-j7/exec";
 
 let pacientes = {};
 let historialPacientes = {};
@@ -54,6 +54,41 @@ function formatearFechaHora(valor) {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function formatearFechaAgenda(valor) {
+  const fechaIso = normalizarFechaInput(valor);
+  if (!fechaIso) return "Sin fecha";
+  const [anio, mes, dia] = fechaIso.split("-");
+  return `${dia}/${mes}/${anio}`;
+}
+
+function formatearHoraAgenda(valor) {
+  let hora = (valor || "").toString().trim().replace(/^'/, "");
+
+  if (!hora) return "";
+
+  if (hora.includes("T")) {
+    hora = hora.split("T")[1].substring(0, 5);
+  } else {
+    hora = hora.substring(0, 5);
+  }
+
+  return hora;
+}
+
+function formatearFechaHoraAgenda(fecha, hora) {
+  const fechaTexto = formatearFechaAgenda(fecha);
+  const horaTexto = formatearHoraAgenda(hora);
+  return horaTexto ? `${fechaTexto}, ${horaTexto} hrs` : fechaTexto;
+}
+
+function compararSesionesAgenda(a, b) {
+  const fechaA = normalizarFechaInput(a[0]);
+  const fechaB = normalizarFechaInput(b[0]);
+  const horaA = formatearHoraAgenda(a[1]);
+  const horaB = formatearHoraAgenda(b[1]);
+  return `${fechaA} ${horaA}`.localeCompare(`${fechaB} ${horaB}`);
 }
 
 function formatearFechaNacimiento(valor) {
@@ -516,7 +551,7 @@ async function toggleSesiones(nombre) {
         (fila[2] || "").toString().trim() === nombre &&
         (fila[4] || "").toString().trim().toLowerCase() === "realizado"
       )
-      .sort((a, b) => new Date(a[0]) - new Date(b[0]));
+      .sort(compararSesionesAgenda);
 
     if (!sesiones.length) {
       visor.innerHTML = "<p>No hay sesiones registradas.</p>";
@@ -525,7 +560,7 @@ async function toggleSesiones(nombre) {
 
     visor.innerHTML = sesiones
       .map((fila, index) => {
-        const fecha = fila[0] ? formatearFechaHora(fila[0]) : "Sin fecha";
+        const fecha = fila[0] ? formatearFechaHoraAgenda(fila[0], fila[1]) : "Sin fecha";
         const tratamiento = fila[3] || "Sin tratamiento";
         return `
           <div class="sesion-item">

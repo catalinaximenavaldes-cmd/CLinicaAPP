@@ -36,13 +36,13 @@ function doPost(e) {
 
     // 2. CONFIRMAR ATENCION
     if (accion === "confirmarAsistenciaDesdeAgenda") {
-      gestionarStock(data.paciente, data.tratamiento, "restar");
+      gestionarStock(data.paciente, data.tratamiento, "restar", data.fecha, data.hora);
       return ContentService.createTextOutput("Asistencia registrada");
     }
 
     // 3. ANULAR ATENCION
     if (accion === "anularAtencion") {
-      gestionarStock(data.paciente, data.tratamiento, "sumar");
+      gestionarStock(data.paciente, data.tratamiento, "sumar", data.fecha, data.hora);
       return ContentService.createTextOutput("Atencion anulada");
     }
 
@@ -109,12 +109,21 @@ function doPost(e) {
       var dAgenda = hojaAgendaEliminar.getDataRange().getValues();
       var pacienteEliminar = (data.paciente || "").toString().trim();
       var tratamientoEliminar = (data.tratamiento || "").toString().trim();
+      var fechaEliminar = normalizarFechaAgenda(data.fecha);
+      var horaEliminar = normalizarHoraAgenda(data.hora);
 
       for (var k = dAgenda.length - 1; k >= 1; k--) {
+        var fechaFilaEliminar = normalizarFechaAgenda(dAgenda[k][0]);
+        var horaFilaEliminar = normalizarHoraAgenda(dAgenda[k][1]);
         var pacienteFila = (dAgenda[k][2] || "").toString().trim();
         var tratamientoFila = (dAgenda[k][3] || "").toString().trim();
 
-        if (pacienteFila === pacienteEliminar && tratamientoFila === tratamientoEliminar) {
+        if (
+          pacienteFila === pacienteEliminar &&
+          tratamientoFila === tratamientoEliminar &&
+          (!fechaEliminar || fechaFilaEliminar === fechaEliminar) &&
+          (!horaEliminar || horaFilaEliminar === horaEliminar)
+        ) {
           hojaAgendaEliminar.deleteRow(k + 1);
           break;
         }
@@ -285,7 +294,32 @@ function doGet(e) {
  * STOCK + SESIONES + AGENDA
  * ============================
  */
-function gestionarStock(paciente, tratamiento, operacion) {
+function normalizarFechaAgenda(valor) {
+  if (!valor) return "";
+  if (typeof valor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(valor)) return valor;
+
+  var fecha = new Date(valor);
+  if (isNaN(fecha.getTime())) return "";
+
+  return Utilities.formatDate(
+    fecha,
+    Session.getScriptTimeZone() || "America/Santiago",
+    "yyyy-MM-dd"
+  );
+}
+
+function normalizarHoraAgenda(valor) {
+  var hora = (valor || "").toString().trim().replace(/^'/, "");
+  if (hora.indexOf("T") !== -1) {
+    hora = hora.split("T")[1].substring(0, 5);
+  } else {
+    hora = hora.substring(0, 5);
+  }
+
+  return hora;
+}
+
+function gestionarStock(paciente, tratamiento, operacion, fechaCita, horaCita) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var hojaAgenda = ss.getSheetByName("Agenda");
   var hojaTratamientos = ss.getSheetByName("Tratamientos");
@@ -303,11 +337,15 @@ function gestionarStock(paciente, tratamiento, operacion) {
 
   var pacienteBuscado = (paciente || "").toString().trim().toLowerCase();
   var tratamientoBuscado = (tratamiento || "").toString().trim().toLowerCase();
+  var fechaBuscada = normalizarFechaAgenda(fechaCita);
+  var horaBuscada = normalizarHoraAgenda(horaCita);
   var nuevoEstado = (operacion === "restar") ? "Realizado" : "Pendiente";
   var estadoEsperado = (operacion === "restar") ? "Pendiente" : "Realizado";
   var filaAgenda = -1;
 
   for (var i = 1; i < agendaData.length; i++) {
+    var fechaFila = normalizarFechaAgenda(agendaData[i][0]);
+    var horaFila = normalizarHoraAgenda(agendaData[i][1]);
     var pacienteFila = (agendaData[i][2] || "").toString().trim().toLowerCase();
     var tratamientoFila = (agendaData[i][3] || "").toString().trim().toLowerCase();
     var estadoFila = (agendaData[i][4] || "").toString().trim();
@@ -315,7 +353,9 @@ function gestionarStock(paciente, tratamiento, operacion) {
     if (
       pacienteFila === pacienteBuscado &&
       tratamientoFila === tratamientoBuscado &&
-      estadoFila === estadoEsperado
+      estadoFila === estadoEsperado &&
+      (!fechaBuscada || fechaFila === fechaBuscada) &&
+      (!horaBuscada || horaFila === horaBuscada)
     ) {
       filaAgenda = i + 1;
       break;
@@ -330,14 +370,21 @@ function gestionarStock(paciente, tratamiento, operacion) {
   SpreadsheetApp.flush();
 
   if (operacion === "restar") {
-    hojaSesiones.appendRow([new Date(), paciente, tratamiento]);
+    hojaSesiones.appendRow([agendaData[filaAgenda - 1][0] || new Date(), paciente, tratamiento]);
   } else {
     var sesionesData = hojaSesiones.getDataRange().getValues();
+    var fechaAgenda = agendaData[filaAgenda - 1][0] ? new Date(agendaData[filaAgenda - 1][0]).toISOString() : "";
+
     for (var k = sesionesData.length - 1; k >= 1; k--) {
       var pacienteSesion = (sesionesData[k][1] || "").toString().trim().toLowerCase();
       var tratamientoSesion = (sesionesData[k][2] || "").toString().trim().toLowerCase();
+      var fechaSesion = sesionesData[k][0] ? new Date(sesionesData[k][0]).toISOString() : "";
 
-      if (pacienteSesion === pacienteBuscado && tratamientoSesion === tratamientoBuscado) {
+      if (
+        pacienteSesion === pacienteBuscado &&
+        tratamientoSesion === tratamientoBuscado &&
+        (!fechaAgenda || fechaSesion === fechaAgenda)
+      ) {
         hojaSesiones.deleteRow(k + 1);
         break;
       }
